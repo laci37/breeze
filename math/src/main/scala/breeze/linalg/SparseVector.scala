@@ -148,6 +148,26 @@ object SparseVector extends SparseVectorOps_Int with SparseVectorOps_Float with 
     r
   }
 
+  def horzcat[V: ClassManifest:DefaultArrayValue](vectors: SparseVector[V]*): SparseMatrix[V] = {
+    val size = vectors.head.size
+    if (!(vectors forall (_.size == size)))
+      throw new IllegalArgumentException("All vectors must have the same size!")
+    val result = SparseMatrix.zeros[V](size, vectors.size)
+    for ((v, col) <- vectors.zipWithIndex)
+      result(::, col) := v
+    result
+  }
+
+  def vertcat[V](vectors: SparseVector[V]*)(implicit canSet: BinaryUpdateOp[SparseVector[V], SparseVector[V], OpSet], vman: ClassManifest[V]): SparseVector[V] = {
+    val size = vectors.foldLeft(0)(_ + _.size)
+    val result = zeros[V](size)
+    var offset = 0
+    for (v <- vectors) {
+      result.slice(offset, offset + v.size) := v
+      offset += v.size
+    }
+    result
+  }
 
   // implicits
   class CanCopySparseVector[@spec(Int, Float, Double) V:ClassManifest:DefaultArrayValue] extends CanCopy[SparseVector[V]] {
